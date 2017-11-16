@@ -1,0 +1,9 @@
+# Created by .ignore support plugin (hsz.mobi)
+
+*.log
+*.db
+*.sql
+.idea/
+*.ipynb_checkpoints
+*.ipynb
+*.gz
