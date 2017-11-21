@@ -16,7 +16,7 @@ def get_highest_volatility_group(n, k):
     days=n
     means = k
     stock_masters = get_stock_master()
-    highest_volatilities = get_highest_volatility(window=days, stock_masters=stock_masters.sample(10))
+    highest_volatilities = get_highest_volatility(window=days, stock_masters=stock_masters)
     centroids = initialize_centroids(means)
     df = assignment(highest_volatilities, centroids, days)
     # reassign updated means
@@ -26,4 +26,10 @@ def get_highest_volatility_group(n, k):
     final_df=stock_masters[stock_masters.index.isin(np.array(df[df['closest'] == highest_mean].index))]
     return final_df
 
+import scipy.stats as stats
+list1=[2,1,3,4]
+list2=[4,2,4,1,2]
+list3=[list1,list2]
+print(stats.f_oneway(list1,list2))
+print(stats.f_oneway(*[list1,list2]))
 
