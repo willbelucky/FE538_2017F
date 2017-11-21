@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from sqlalchemy.exc import SQLAlchemyError
 import traceback
+from sqlalchemy import types
 
 database = 'highvol'
 aws_endpoint = 'findb.cay7taoqqrm6.ap-northeast-2.rds.amazonaws.com'
@@ -125,14 +126,40 @@ def get_highest_volatility(window, stock_masters=None):
         stock_masters = get_stock_master()
 
     volatility_column_name = 'highest_volatility_{}'.format(window)
+    schema_name = 'highvol_' + volatility_column_name
+    select_sql = "SELECT * FROM {}".format(schema_name)
     highest_volatilities = pd.DataFrame(columns=[volatility_column_name])
-    highest_volatilities.index.name = 'code'
-    for code, name in stock_masters.iterrows():
-        stock_prices = get_stock_price([code])
-        # If window is bigger than the length of stock_price, the window is meaningless.
-        window = min(window, len(stock_prices))
-        highest_volatility = max(stock_prices['adj_close'].rolling(window=window).std().dropna())
-        highest_volatilities.loc[code] = [highest_volatility]
+    connection = get_connection()
+
+    try:
+        # If the table does not exist, create the table.
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS `{}` (
+                code VARCHAR(16) NOT NULL PRIMARY KEY,
+                {} DOUBLE NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        """.format(schema_name, volatility_column_name))
+
+        # get all stock codes from the db.
+        highest_volatilities = pd.read_sql(select_sql, connection)
+        highest_volatilities.set_index('code', inplace=True)
+
+        if highest_volatilities.empty:
+            highest_volatilities.index.name = 'code'
+            for code, name in stock_masters.iterrows():
+                stock_prices = get_stock_price([code])
+                # If window is bigger than the length of stock_price, the window is meaningless.
+                window = min(window, len(stock_prices))
+                highest_volatility = max(stock_prices['adj_close'].rolling(window=window).std().dropna())
+                highest_volatilities.loc[code] = [highest_volatility]
+
+            highest_volatilities.to_sql(schema_name, connection, if_exists='append', dtype={'code': types.VARCHAR(16)})
+
+    except SQLAlchemyError or EnvironmentError:
+        traceback.print_exc()
+
+    finally:
+        connection.close()
 
     return highest_volatilities
 
