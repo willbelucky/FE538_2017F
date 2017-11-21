@@ -5,12 +5,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-df = pd.DataFrame({
-    'x': [12, 20, 28, 18, 29, 33, 24, 45, 45, 52, 51, 52, 55, 53, 55, 61, 64, 69, 72],
-    'y': [39, 36, 30, 52, 54, 46, 55, 59, 63, 70, 66, 63, 58, 23, 14, 8, 19, 7, 24]
-})
 
-np.random.seed(200)
+
+
 k = 5
 # centroids[i] = [x, y]
 def initialize_centroids(k):
@@ -58,4 +55,3 @@ def k_means_clustering(df,k):
     centroids=update(centroids)
     return centroids
 
-print(k_means_clustering(df,5))
