@@ -148,9 +148,13 @@ def get_highest_volatility(window, stock_masters=None):
             highest_volatilities.index.name = 'code'
             for code, name in stock_masters.iterrows():
                 stock_prices = get_stock_price([code])
+                first_price = stock_prices.iloc[0]['adj_close']
+                stock_prices['profit_rate'] = stock_prices['adj_close'] / first_price
+
                 # If window is bigger than the length of stock_price, the window is meaningless.
-                window = min(window, len(stock_prices))
-                highest_volatility = max(stock_prices['adj_close'].rolling(window=window).std().dropna())
+                assert window < len(stock_prices)
+
+                highest_volatility = max(stock_prices['profit_rate'].rolling(window=window).std().dropna())
                 highest_volatilities.loc[code] = [highest_volatility]
 
             highest_volatilities.to_sql(schema_name, connection, if_exists='append', dtype={'code': types.VARCHAR(16)})
@@ -211,3 +215,13 @@ def get_market_capitalization_sum(selected_stock_masters):
         connection.close()
 
     return market_capitalization_sum
+
+
+if __name__ == '__main__':
+    # Save highest volatility data for preparing future.
+    print('{} is started...'.format('get_highest_volatility'))
+    stock_masters = get_stock_master()
+    for window in range(5, 100):
+        highest_volatilities = get_highest_volatility(window=window, stock_masters=stock_masters)
+        print(highest_volatilities.head())
+    print('{} is done!!'.format('get_highest_volatility'))
