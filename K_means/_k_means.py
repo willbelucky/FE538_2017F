@@ -10,7 +10,7 @@ k = 5
 # centroids[i] = [x, y]
 def initialize_centroids(k):
     centroids = {
-        i + 1: np.random.randint(100, 20000)
+        i + 1: np.random.randint(0, 2)
         for i in range(k)
         }
     return centroids
