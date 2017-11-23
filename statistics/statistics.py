@@ -25,26 +25,23 @@ def do_anova_test(n, k):
         p_1 = p_2 = ... = p_{740-n}이면 True, 아니면 False
     """
     high_volatility_stock_masters = get_highest_volatility_group(n, k)
-    market_capitalization_sums = get_market_capitalization_sum(high_volatility_stock_masters)
-    portions = list(market_capitalization_sums['portion'].values)
-
-    test_result = stats.f_oneway(*portions)
-    return test_result
-
+    market_capitalization_sums = get_market_capitalization_sum(high_volatility_stock_masters)[::2]
+    market_capitalization_sums['rolling']=pd.rolling_mean(market_capitalization_sums['portion'],window=20)
+    market_capitalization_sums.dropna(inplace=True)
+    portions = list(market_capitalization_sums['rolling'].values)
+    return portions
 
 if __name__ == '__main__':
-    print(do_anova_test(5, 80))
-# 높은 변동성 그룹을 가져온다.
-
-
-
-# 그 그룹들로 비율을 뽑는다.
-
-# 비율로 아노바 테스트를 돌린다.
-
-# 아노바 테스트 결과를 리턴한다.
-
-#
+    K=80
+    for days in range(5,9):
+        print("{}일 {}개의 center를 이용한 test결과는".format(days,K))
+        print(stats.mstats.normaltest(do_anova_test(days, K)))
+        plt.hist(do_anova_test(days, K),bins=30)
+        plt.show()
+        #fig=plt.figure()
+        #ax=fig.add_subplot(111)
+        #stats.probplot(do_anova_test(days, K),plot=ax)
+        #plt.show()
 
 
 
