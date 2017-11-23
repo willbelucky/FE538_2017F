@@ -51,7 +51,7 @@ class TestGetHighestVolatility(TestCase):
     def test_get_highest_volatility(self):
         print('{} is started...'.format(self._testMethodName))
         stock_masters = get_stock_master()
-        highest_volatilities = get_highest_volatility(window=7, stock_masters=stock_masters.sample(10))
+        highest_volatilities = get_highest_volatility(window=7, stock_masters=stock_masters)
         print(highest_volatilities.head())
         self.assertEqual(10, len(highest_volatilities))
         self.assertEqual(sorted(['code']), sorted(highest_volatilities.index.names))
