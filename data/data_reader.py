@@ -3,31 +3,14 @@
 :Author: Jaekyoung Kim
 :Date: 2017. 11. 16.
 """
-import os
 
-from sqlalchemy import create_engine
-import pandas as pd
-import numpy as np
-from sqlalchemy.exc import SQLAlchemyError
 import traceback
-from sqlalchemy import types
 
-database = 'highvol'
-aws_endpoint = 'findb.cay7taoqqrm6.ap-northeast-2.rds.amazonaws.com'
-aws_user = 'highvol'
-aws_password = 'FE538'
-aws_engine = create_engine(
-    'mysql+mysqlconnector://{}:{}@{}/{}'.format(aws_user, aws_password, aws_endpoint, database),
-    encoding='utf-8', pool_recycle=1, pool_size=2 * (os.cpu_count() or 1))
+import numpy as np
+import pandas as pd
+from sqlalchemy.exc import SQLAlchemyError
 
-
-def get_connection():
-    """
-    Get connection of db.
-
-    :return Connection:
-    """
-    return aws_engine.connect()
+from utils.db import get_connection
 
 
 def get_stock_master():
@@ -57,6 +40,9 @@ def get_stock_master():
     return stock_masters
 
 
+STOCK_PRICE_CACHE = {}
+
+
 def get_stock_price(codes):
     """
     Get all stock prices from MySQL and return them.
@@ -80,7 +66,7 @@ def get_stock_price(codes):
         raise ValueError("codes has at least one element.")
 
     schema_name = 'highvol_stock_price'
-    select_sql = "SELECT `date`, `code`, `market_capitalization`, `listed_stocks_number` FROM {}".format(schema_name)
+    select_sql = "SELECT `date`, `code`, `listed_stocks_number`, `market_capitalization` FROM {}".format(schema_name)
     stock_prices = pd.DataFrame()
     connection = get_connection()
 
@@ -144,10 +130,24 @@ def get_highest_volatility(window, stock_masters=None):
         highest_volatilities = pd.read_sql(select_sql, connection)
         highest_volatilities.set_index('code', inplace=True)
 
-        if highest_volatilities.empty:
+        already_saved_codes = highest_volatilities.index.values
+
+        if len(highest_volatilities) < len(stock_masters):
             highest_volatilities.index.name = 'code'
             for code, name in stock_masters.iterrows():
-                stock_prices = get_stock_price([code])
+
+                # If the code is already saved, pass this iteration.
+                if code in already_saved_codes:
+                    continue
+
+                # Get stock prices. If the stock prices are save in a cache, use it. Or update the cache.
+                if code in STOCK_PRICE_CACHE:
+                    stock_prices = STOCK_PRICE_CACHE[code]
+                else:
+                    stock_prices = get_stock_price([code])
+                    STOCK_PRICE_CACHE[code] = stock_prices
+                    print(stock_prices.head())
+
                 first_price = stock_prices.iloc[0]['adj_close']
                 stock_prices['profit_rate'] = stock_prices['adj_close'] / first_price
 
@@ -156,8 +156,9 @@ def get_highest_volatility(window, stock_masters=None):
 
                 highest_volatility = max(stock_prices['profit_rate'].rolling(window=window).std().dropna())
                 highest_volatilities.loc[code] = [highest_volatility]
-
-            highest_volatilities.to_sql(schema_name, connection, if_exists='append', dtype={'code': types.VARCHAR(16)})
+                connection.execute("""
+                    INSERT IGNORE INTO `{}` (code, {}) VALUES ('{}', {})
+                """.format(schema_name, volatility_column_name, str(code).zfill(6), highest_volatility))
 
     except SQLAlchemyError or EnvironmentError:
         traceback.print_exc()
@@ -215,13 +216,3 @@ def get_market_capitalization_sum(selected_stock_masters):
         connection.close()
 
     return market_capitalization_sum
-
-
-if __name__ == '__main__':
-    # Save highest volatility data for preparing future.
-    print('{} is started...'.format('get_highest_volatility'))
-    stock_masters = get_stock_master()
-    for window in range(5, 100):
-        highest_volatilities = get_highest_volatility(window=window, stock_masters=stock_masters)
-        print(highest_volatilities.head())
-    print('{} is done!!'.format('get_highest_volatility'))

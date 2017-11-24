@@ -1,22 +1,23 @@
-## Initialization
-
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import time
 
 
-
-k = 5
-# centroids[i] = [x, y]
 def initialize_centroids(k):
+    """
+    Initialization
+    """
+    np.random.seed(seed=int(time.time()))
     centroids = {
-        i + 1: np.random.randint(0, 2)
+        i + 1: np.random.rand()
         for i in range(k)
-        }
+    }
     return centroids
-## Assignment Stage
 
-def assignment(df, centroids,days):
+
+def assignment(df, centroids, days):
+    """
+    Assignment Stage
+    """
     for i in centroids.keys():
         # sqrt((x1 - x2)^2 - (y1 - y2)^2)
         df['distance_from_{}'.format(i)] = (
@@ -30,20 +31,20 @@ def assignment(df, centroids,days):
     return df
 
 
-## Update Stage
-
-import copy
-
-def update(df,centroids):
+def update(df, centroids):
+    """
+    Update Stage
+    """
     for i in centroids.keys():
         if i in np.array(df['closest']):
             centroids[i] = np.mean(df[df['closest'] == i]['distance_from_{}'.format(i)])
         else:
             continue
     return centroids
-def k_means_clustering(df,k,days):
-    centroids = initialize_centroids(k)
-    df = assignment(df, centroids,days)
-    centroids=update(df,centroids)
-    return centroids
 
+
+def k_means_clustering(df, k, days):
+    centroids = initialize_centroids(k)
+    df = assignment(df, centroids, days)
+    centroids = update(df, centroids)
+    return centroids
