@@ -14,11 +14,8 @@ def get_highest_volatility_group(window, k):
     """
     stock_masters = get_stock_master()
     highest_volatilities = get_highest_volatility(window=window, stock_masters=stock_masters)
-    centroids = initialize_centroids(k)
+    centroids = k_means_clustering(highest_volatilities, k, window)
     df = assignment(highest_volatilities, centroids, window)
-    # reassign updated means
-    centroids = update(df, centroids)
-    df = assignment(df, centroids, window)
     highest_mean = max(centroids, key=centroids.get)
     highest_volatility_stock_masters \
         = stock_masters[stock_masters.index.isin(np.array(df[df['closest'] == highest_mean].index))]

@@ -46,5 +46,9 @@ def update(df, centroids):
 def k_means_clustering(df, k, days):
     centroids = initialize_centroids(k)
     df = assignment(df, centroids, days)
-    centroids = update(df, centroids)
-    return centroids
+    updated_centroids = update(df, centroids)
+    while centroids != updated_centroids:
+        centroids = updated_centroids
+        df = assignment(df, centroids, days)
+        updated_centroids = update(df, centroids)
+    return updated_centroids
